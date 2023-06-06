@@ -6,11 +6,6 @@ import pyttsx3
 
 app = Flask(__name__)
 
-# def text_to_speech(text):
-#     engine = pyttsx3.init()
-#     engine.say(text)
-#     engine.runAndWait()
-
 def text_to_speech(text):
     engine = pyttsx3.init()
     engine.save_to_file(text, 'static/output.mp3')
@@ -82,5 +77,5 @@ def api():
         return {"content": 'Failed to generate response!', "isCodeBlock": False}
 
 if __name__=='__main__':
-    app.run(debug=True)
+    app.run(debug=False, host='0.0.0.0')
 
