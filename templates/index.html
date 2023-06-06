@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Chat App</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- for the user input box -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/highlight.js@10.7.2/lib/languages/python.min.js"></script>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/a11y-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+</head>
+
+<body>
+
+  <center>
+    <h1>Welcome to healthbot, tell me your illness and severity level...</h1>
+    <br><br><hr>
+  </center>
+  <div class="container2">
+    <h3>Select your Health Conditions below : </h3>
+
+    <br><br>
+    <form id="healthBotForm" action="/api002" method="POST">
+      <select name="health_conditions" id="health_conditions" onchange="showSecondDropdown()">
+        <option value="" selected disabled>Select your health condition</option>
+        {% for condition in health_conditions %}
+        <option value="{{ condition }}">{{ condition }}</option>
+        {% endfor %}
+      </select><br>
+  
+      <select id="illness" name="illness" >
+        <option value="" selected disabled>Select an illness</option>
+      </select><br>
+    
+      <select id="severity" name="severity">
+        <option value="" selected disabled>Select severity</option>
+        <option value="Severe">Severe</option>
+        <option value="Mild">Mild</option>
+        <option value="Medium">Medium</option>
+      </select><br>
+  
+      <center><button type="submit" style="font-size: 19px;">!! Ask me !!</button></center>
+    </form>
+  
+    <div id="resultDiv" style="font-size: 20px;color: rgb(37, 3, 70);">
+      {% if result %}
+      <h3 style="margin-top: 40px;">Note this</h3>  
+      <p>{{ result }}</p>
+      <audio autoplay>
+        <source src="{{ url_for('static', filename='output.mp3') }}" type="audio/mpeg">
+      </audio>
+      {% endif %}
+    </div>
+
+  </div>
+
+
+  <div style="height: 100px;max-height: 350px;" class="container mt-5">
+    <h1 style="color:rgb(79, 97, 252)">You can tell me more about your symptoms...</h1>
+    <div class="chat-box mt-3">
+      <!-- Chat messages will be added here dynamically -->
+    </div>
+    <div class="form-group mt-3">
+      <textarea style="height: 40px; max-height: fit-content;" class="form-control" rows="3"
+        placeholder="Type your symptoms here" id="message-input"></textarea>
+    </div>
+    <button type="button" class="btn btn-primary" id="send-btn"><img style="width: 30px;height: 20px;" src="{{ url_for('static', filename='images/right-arrow.png') }}" alt=""></button>
+  </div>
+
+
+
+  <script>
+    setInterval(highlightAll, 1000);
+    // Function to highlight code using highlight.js library
+    function highlightAll() {
+      document.querySelectorAll("pre code").forEach(block => {
+        hljs.highlightBlock(block);
+      });
+    }
+
+    const chatBox = document.querySelector(".chat-box");
+    const messageInput = document.querySelector("#message-input");
+    const sendBtn = document.querySelector("#send-btn");
+
+    function addMessage(message, isUserMessage) {
+      const messageDiv = document.createElement("div");
+      messageDiv.classList.add("mt-3", "p-3", "rounded");
+
+      if (isUserMessage) {
+        messageDiv.classList.add("user-message");
+
+      } else {
+        messageDiv.classList.add("bot-message");
+      }
+
+      messageDiv.innerHTML = `
+        <img src="{{ url_for('static', filename='images/user.png') }}" class="user-icon"><p>${message}</p>
+        `;
+
+      chatBox.appendChild(messageDiv);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function displayBotMessage(message, isCodeBlock) {
+    const messageDiv = document.createElement("div");
+    messageDiv.classList.add("mt-3", "p-3", "rounded");
+    messageDiv.classList.add("bot-message");
+
+    if (isCodeBlock) {
+      messageDiv.innerHTML = `<img src="{{ url_for('static', filename='images/gpt.jpg') }}" class="bot-icon"><pre><code>${message}</code></pre>`;
+    } else {
+      messageDiv.innerHTML = `<img src="{{ url_for('static', filename='images/gpt.jpg') }}" class="bot-icon"><p>${message}</p>`;
+    }
+
+    chatBox.appendChild(messageDiv);
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
+
+  function sendMessage() {
+    const message = messageInput.value.trim();
+
+    if (message !== "") {
+      addMessage(message, true);
+
+      fetch("/api", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"  // Set the correct content type
+        },
+        body: JSON.stringify({ message })
+      })
+        .then(response => response.json())
+        .then(data => {
+          messageInput.value = "";
+          const content = data.content;
+          const isCodeBlock = data.isCodeBlock;
+
+          if (isCodeBlock) {
+            displayBotMessage(content, true);  // Display code block response
+          } else {
+            displayBotMessage(content, false);  // Display regular response
+          }
+        })
+        .catch(error => console.error(error));
+    }
+  }
+
+    sendBtn.addEventListener("click", sendMessage);
+    messageInput.addEventListener("keydown", event => {
+      if (event.keyCode === 13 && !event.shiftKey) {
+        event.preventDefault();
+        sendMessage();
+      }
+    });
+
+    const healthConditionDropdown = document.getElementById('health_conditions');
+const illnessDropdown = document.getElementById('illness');
+const severityDropdown = document.getElementById('severity');
+
+const optionsByCondition = {
+  'Common Illness': ['Cough', 'Sore Throat', 'Fatigue'],
+  'Chronic Conditions': ['Diabetes', 'Hypertension', 'Asthma'],
+  'Mental Health': ['Anxiety', 'Depression', 'Stress'],
+  'General Symptoms': ['Headache', 'Fever', 'Nausea'],
+  'Physical Wounds': ['Burns', 'Cuts', 'Fractures'],
+};
+
+
+function updateIllnessDropdown() {
+  const selectedCondition = healthConditionDropdown.value;
+  const illnesses = optionsByCondition[selectedCondition] || [];
+
+  illnessDropdown.innerHTML = '';
+
+  const defaultOption = document.createElement('option');
+  defaultOption.value = '';
+  defaultOption.textContent = 'Select an illness';
+  illnessDropdown.appendChild(defaultOption);
+
+  if (illnesses.length > 0) {
+    illnesses.forEach((illness) => {
+      const option = document.createElement('option');
+      option.value = illness;
+      option.textContent = illness;
+      illnessDropdown.appendChild(option);
+    });
+  }
+}
+
+function showSecondDropdown() {
+  var firstDropdown = document.getElementById('health_conditions');
+
+  var secondDropdown = document.getElementById('illness');
+
+  if (firstDropdown.value !== '') {
+    secondDropdown.disabled = false;
+  } else {
+    secondDropdown.disabled = true;
+  }
+
+  if (secondDropdown.value !== '') {
+    thirdDropdown.disabled = false;
+  } else {
+    thirdDropdown.disabled = true;
+  }
+}
+
+healthConditionDropdown.addEventListener('change', updateIllnessDropdown);
+
+illnessDropdown.addEventListener('change', showSecondDropdown);
+
+
+updateIllnessDropdown();
+
+  </script>
+</body>
+
+</html>
