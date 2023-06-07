@@ -22,7 +22,7 @@ health_conditions = [
 ]
 
 
-openai.api_key = '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'
+openai.api_key = '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'
 
 @app.route('/')
 def index():
